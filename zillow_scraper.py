@@ -37,45 +37,12 @@ def get_house_summary(html_soup):
     return house_infos
 
 def get_detail(house_infos, param):
-    info = ""
+    res = ""
     for i in house_infos:
-        if param in info:
-            info = i
+        if param in i:
+            res = i
             break
-    return info
-
-def get_house_price(house_infos):
-    price = ""
-    for info in house_infos:
-        if "$" in info:
-            price = info
-            break
-    
-    return price
-
-def get_bed(house_infos):
-    bed = ""
-    for info in house_infos:
-        if "beds" in info or "bed" in info:
-            bed = info
-            break
-    return bed
-
-def get_bath(house_infos):
-    bath = ""
-    for info in house_infos:
-        if "baths" in info or "bath" in info:
-            bath = info
-            break
-    return bath
-
-def get_sqft(house_infos):
-    sqft = ""
-    for info in house_infos:
-        if "sqft" in info:
-            sqft = info
-            break
-    return sqft
+    return res
 
 def get_school_rates(html_soup):
     schools = html_soup.find('div', class_="hdp-nearby-schools")
@@ -151,7 +118,7 @@ for house_id in house_ids:
     i = i + 1
     print("house number " + str(i))
     soup = get_house_soup(house_id, headers)
-    time.sleep(3)
+    time.sleep(5)
     print(house_id)
 
     #get summary of house_info
@@ -189,9 +156,3 @@ for house_id in house_ids:
     print(msg)
     indidual_house_info.write(msg + "\n")
  
-
-
-
-
-
-
