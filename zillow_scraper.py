@@ -1,29 +1,12 @@
 from bs4 import BeautifulSoup
 from requests import get
-import time, random 
+import time, random, sys
 import re
 import pandas as pd
 import itertools
 import matplotlib.pyplot as plt
 import seaborn as sns
 #scrape house information from main page
-n_page=1
-sum_house=0
-house_ids = []
-total = 1000
-i = 0
-
-#scrape information from specific house page
-prices = []
-beds = []
-baths = []
-sqfts = []
-ele_schs = []
-mid_schs = []
-high_schs = []
-
-headers = ({'User-Agent':
-                    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3607.0 Safari/537.36'})
 
 def get_house_summary(html_soup):
     summary = html_soup.find('div', class_="home-details-summary-and-price")
@@ -87,7 +70,7 @@ def get_total_houses(html_soup):
     total = int(line[ind+1:])
     return total
 
-def get_individial_house(house_containers):
+def get_individial_house(house_containers, house_ids, house_info_file):
     for i in range(len(house_containers)):        
         for instance in house_containers[i].find_all('a'):
             house_id = instance.get('href')
@@ -97,62 +80,87 @@ def get_individial_house(house_containers):
                 house_info_file.write(house_id) 
                 house_info_file.write("\n")   
 
-house_info_file = open("house_info.txt", "w")
-indidual_house_info = open("individual_houses.txt", "w")
 
-while sum_house < total:
-    url = "https://www.zillow.com/homes/for_sale/27560_rb/" + str(n_page+i) + "_p"
-    soup = get_house_soup(url, headers)
-    house_containers = get_house_containers(soup)
-    sum_house = sum_house + get_num_houses_per_page(house_containers)
-    total = get_total_houses(soup)
-    #print(total)
-    get_individial_house(house_containers)
-    i = i + 1
-    time.sleep(2)
-print("=> total number of houses scraped is " + str(sum_house))
-house_info_file.close()
-i = 0
+def main(argv):
+    n_page=1
+    sum_house=0
+    house_ids = []
+    total = 1000
+    i = 0
 
-for house_id in house_ids:
-    i = i + 1
-    print("house number " + str(i))
-    soup = get_house_soup(house_id, headers)
-    time.sleep(5)
-    print(house_id)
+    #scrape information from specific house page
+    prices = []
+    beds = []
+    baths = []
+    sqfts = []
+    ele_schs = []
+    mid_schs = []
+    high_schs = []
 
-    #get summary of house_info
-    house_infos = get_house_summary(soup)
+    headers = ({'User-Agent':
+                        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3607.0 Safari/537.36'})
 
-    price = get_detail(house_infos, "$")
-    if(price != ""):
-        prices.append(price)
+    house_info_file = open("house_info.txt", "w")
+    filename = "individual_houses_in_" + argv + ".txt"
+    indidual_house_info = open(filename, "w")
 
-    bed = get_detail(house_infos, "bed")
-    if(bed != ""):
-        beds.append(bed)
+    while sum_house < total:
+        url = "https://www.zillow.com/homes/for_sale/" + argv + "/" + str(n_page+i) + "_p"
+        print("url is " + url)
+        soup = get_house_soup(url, headers)
+        house_containers = get_house_containers(soup)
+        sum_house = sum_house + get_num_houses_per_page(house_containers)
+        total = get_total_houses(soup)
+        #print(total)
+        get_individial_house(house_containers, house_ids, house_info_file)
+        i = i + 1
+        time.sleep(2)
+    print("=> total number of houses scraped is " + str(sum_house))
+    house_info_file.close()
+    i = 0
 
-    bath = get_detail(house_infos, "bath")
-    if(bath != ""):
-        baths.append(bath)
+    for house_id in house_ids:
+        i = i + 1
+        print("house number " + str(i))
+        soup = get_house_soup(house_id, headers)
+        time.sleep(5)
+        print(house_id)
 
-    sqft = get_detail(house_infos, "sqft")
-    if(sqft != ""):
-        sqfts.append(sqft)
+        #get summary of house_info
+        house_infos = get_house_summary(soup)
 
-    #get school ratings
-    sch_rates = get_school_rates(soup)
+        price = get_detail(house_infos, "$")
+        if(price != ""):
+            prices.append(price)
 
-    ele_sch = get_elementary_sch(sch_rates)
-    ele_schs.append(ele_sch)
+        bed = get_detail(house_infos, "bed")
+        if(bed != ""):
+            beds.append(bed)
 
-    mid_sch = get_middle_sch(sch_rates)
-    mid_schs.append(mid_sch)
+        bath = get_detail(house_infos, "bath")
+        if(bath != ""):
+            baths.append(bath)
 
-    high_sch = get_high_sch(sch_rates)
-    high_schs.append(high_sch)
+        sqft = get_detail(house_infos, "sqft")
+        if(sqft != ""):
+            sqfts.append(sqft)
 
-    msg = price +' | ' + bed + ' | ' + bath + ' | ' + sqft+ ' | ' + ele_sch+ ' | ' + mid_sch + ' | ' + high_sch
-    print(msg)
-    indidual_house_info.write(msg + "\n")
- 
+        #get school ratings
+        sch_rates = get_school_rates(soup)
+        if(len(sch_rates) != 3):
+            ele_sch = mid_sch = high_sch = "-1"
+        else:
+            ele_sch = get_elementary_sch(sch_rates)
+            mid_sch = get_middle_sch(sch_rates)
+            high_sch = get_high_sch(sch_rates)
+        ele_schs.append(ele_sch)
+        mid_schs.append(mid_sch)
+        high_schs.append(high_sch)
+
+        msg = price +' | ' + bed + ' | ' + bath + ' | ' + sqft+ ' | ' + ele_sch+ ' | ' + mid_sch + ' | ' + high_sch
+        print(msg)
+        indidual_house_info.write(msg + "\n")
+    
+
+if __name__ == "__main__":
+    main(sys.argv[1])
